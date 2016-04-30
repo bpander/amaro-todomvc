@@ -117,6 +117,7 @@ var app = app || {};
 	var model = new app.TodoModel('amaro-todos');
 	var element = document.getElementsByClassName('todoapp')[0];
 
+	Amaro.components({ TodoItem: app.TodoItem });
 	app.todoApp = Amaro.mount(element, TodoApp, { model: model });
 
 	function render() {

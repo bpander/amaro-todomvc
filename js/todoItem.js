@@ -17,6 +17,10 @@ var app = app || {};
 	app.TodoItem.prototype = Object.create(Amaro.Component.prototype);
 	app.TodoItem.prototype.constructor = app.TodoItem;
 
+	app.TodoItem.defaults = {
+		editText: ''
+	};
+
 	Object.assign(app.TodoItem.prototype, {
 		handleSubmit: function (event) {
 			var val = this.state.editText.trim();
@@ -75,40 +79,10 @@ var app = app || {};
 		 */
 		componentDidUpdate: function (prevState) {
 			if (!prevState.editing && this.state.editing) {
-				var node = React.findDOMNode(this.refs.editField);
+				var node = this.element.querySelector('[data-ref="editField"]');
 				node.focus();
 				node.setSelectionRange(node.value.length, node.value.length);
 			}
-		},
-
-		render: function () {
-			return (
-				<li className={classNames({
-					completed: this.state.todo.completed,
-					editing: this.state.editing
-				})}>
-					<div className="view">
-						<input
-							className="toggle"
-							type="checkbox"
-							checked={this.state.todo.completed}
-							onChange={this.state.onToggle}
-						/>
-						<label onDoubleClick={this.handleEdit}>
-							{this.state.todo.title}
-						</label>
-						<button className="destroy" onClick={this.state.onDestroy} />
-					</div>
-					<input
-						ref="editField"
-						className="edit"
-						value={this.state.editText}
-						onBlur={this.handleSubmit}
-						onChange={this.handleChange}
-						onKeyDown={this.handleKeyDown}
-					/>
-				</li>
-			);
 		}
 	});
 })();

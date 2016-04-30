@@ -16,7 +16,7 @@
 						placeholder="What needs to be done?"
 						autofocus
 						data-out="{
-							value: this.state.newTodo,
+							value: state.newTodo,
 							onkeydown: this.handleNewTodoKeyDown.bind(this),
 							oninput: this.handleChange.bind(this)
 						}"
@@ -31,8 +31,48 @@
 							checked: this.activeTodoCount === 0
 						}"
 					/>
-					<ul class="todo-list" data-each="this.shownTodos">
-						{todoItems}
+					<ul class="todo-list" data-each="this.shownTodos" data-key="loop.val.id">
+						<li data-component="TodoItem"
+							data-state="{
+								todo: loop.val,
+								editing: state.editing === loop.val.id,
+								onToggle: this.toggle.bind(this, loop.val),
+								onDestroy: this.destroy.bind(this, loop.val),
+								onEdit: this.edit.bind(this, loop.val),
+								onSave: this.save.bind(this, loop.val),
+								onCancel: this.cancel.bind(this)
+							}"
+							data-out="{ className: classNames({
+								completed: loop.val.completed,
+								editing: state.editing === loop.val.id
+							}) }"
+						>
+							<div class="view">
+								<input
+									class="toggle"
+									type="checkbox"
+									data-out="{
+										checked: state.todo.completed,
+										onchange: state.onToggle
+									}"
+								/>
+								<label data-out="{
+									ondblclick: this.handleEdit.bind(this),
+									textContent: state.todo.title
+								}"></label>
+								<button class="destroy" data-out="{ onclick: state.onDestroy }" />
+							</div>
+							<input
+								data-ref="editField"
+								class="edit"
+								data-out="{
+									value: state.editText,
+									onblur: this.handleSubmit.bind(this),
+									oninput: this.handleChange.bind(this),
+									onkeydown: this.handleKeyDown.bind(this)
+								}"
+							/>
+						</li>
 					</ul>
 				</section>
 
