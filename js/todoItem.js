@@ -2,7 +2,7 @@
 /*jshint white: false */
 /*jshint trailing: false */
 /*jshint newcap: false */
-/*global React */
+/*global Amaro */
 var app = app || {};
 
 (function () {
@@ -11,7 +11,13 @@ var app = app || {};
 	var ESCAPE_KEY = 27;
 	var ENTER_KEY = 13;
 
-	app.TodoItem = React.createClass({
+	app.TodoItem = function TodoItem (element) {
+		Amaro.Component.call(this, element);
+	}
+	app.TodoItem.prototype = Object.create(Amaro.Component.prototype);
+	app.TodoItem.prototype.constructor = app.TodoItem;
+
+	Object.assign(app.TodoItem.prototype, {
 		handleSubmit: function (event) {
 			var val = this.state.editText.trim();
 			if (val) {

@@ -2,7 +2,7 @@
 /*jshint white:false */
 /*jshint trailing:false */
 /*jshint newcap:false */
-/*global React, Router*/
+/*global Amaro, Router*/
 var app = app || {};
 
 (function () {
@@ -11,19 +11,22 @@ var app = app || {};
 	app.ALL_TODOS = 'all';
 	app.ACTIVE_TODOS = 'active';
 	app.COMPLETED_TODOS = 'completed';
-	var TodoFooter = app.TodoFooter;
-	var TodoItem = app.TodoItem;
 
 	var ENTER_KEY = 13;
 
-	var TodoApp = React.createClass({
-		getInitialState: function () {
-			return {
-				nowShowing: app.ALL_TODOS,
-				editing: null,
-				newTodo: ''
-			};
-		},
+	function TodoApp (element) {
+		Amaro.Component.call(this, element);
+	}
+	TodoApp.prototype = Object.create(Amaro.Component.prototype);
+	TodoApp.prototype.constructor = TodoApp;
+
+	TodoApp.defaults = {
+		nowShowing: app.ALL_TODOS,
+		editing: null,
+		newTodo: ''
+	};
+
+	Object.assign(TodoApp.prototype, {
 
 		componentDidMount: function () {
 			var setState = this.setState;
@@ -168,14 +171,13 @@ var app = app || {};
 	});
 
 	var model = new app.TodoModel('react-todos');
+	var element = document.getElementsByClassName('todoapp')[0];
+
+	app.todoApp = Amaro.mount(element, TodoApp, { model: model });
 
 	function render() {
-		React.render(
-			<TodoApp model={model}/>,
-			document.getElementsByClassName('todoapp')[0]
-		);
+		app.todoApp.setState();
 	}
 
 	model.subscribe(render);
-	render();
 })();
