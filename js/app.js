@@ -52,7 +52,7 @@ var app = app || {};
 			}, 0);
 			this.completedCount = todos.length - this.activeTodoCount;
 			this.shownTodos = todos.filter(function (todo) {
-				switch (this.state.nowShowing) {
+				switch (nextState.nowShowing) {
 				case app.ACTIVE_TODOS:
 					return !todo.completed;
 				case app.COMPLETED_TODOS:
