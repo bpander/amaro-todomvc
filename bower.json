@@ -1,0 +1,20 @@
+{
+  "name": "amaro-todomvc",
+  "description": "",
+  "main": "",
+  "authors": [
+    "Brad Anderson <brad.anderson87@gmail.com>"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/bpander/amaro-todomvc",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "amaro": "^0.1.0"
+  }
+}
