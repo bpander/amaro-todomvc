@@ -16,6 +16,13 @@ var app = app || {};
 
 	function TodoApp (element) {
 		Amaro.Component.call(this, element);
+
+		this.activeTodoCount = 0;
+
+		this.completedCount = 0;
+
+		this.shownTodos = [];
+
 	}
 	TodoApp.prototype = Object.create(Amaro.Component.prototype);
 	TodoApp.prototype.constructor = TodoApp;
@@ -36,6 +43,24 @@ var app = app || {};
 				'/completed': setState.bind(this, {nowShowing: app.COMPLETED_TODOS})
 			});
 			router.init('/');
+		},
+
+		componentWillUpdate: function (nextState) {
+			var todos = nextState.model.todos;
+			this.activeTodoCount = todos.reduce(function (accum, todo) {
+				return todo.completed ? accum : accum + 1;
+			}, 0);
+			this.completedCount = todos.length - this.activeTodoCount;
+			this.shownTodos = todos.filter(function (todo) {
+				switch (this.state.nowShowing) {
+				case app.ACTIVE_TODOS:
+					return !todo.completed;
+				case app.COMPLETED_TODOS:
+					return todo.completed;
+				default:
+					return true;
+				}
+			}, this);
 		},
 
 		handleChange: function (event) {
@@ -85,92 +110,11 @@ var app = app || {};
 
 		clearCompleted: function () {
 			this.state.model.clearCompleted();
-		},
-
-		render: function () {
-			var footer;
-			var main;
-			var todos = this.state.model.todos;
-
-			var shownTodos = todos.filter(function (todo) {
-				switch (this.state.nowShowing) {
-				case app.ACTIVE_TODOS:
-					return !todo.completed;
-				case app.COMPLETED_TODOS:
-					return todo.completed;
-				default:
-					return true;
-				}
-			}, this);
-
-			var todoItems = shownTodos.map(function (todo) {
-				return (
-					<TodoItem
-						key={todo.id}
-						todo={todo}
-						onToggle={this.toggle.bind(this, todo)}
-						onDestroy={this.destroy.bind(this, todo)}
-						onEdit={this.edit.bind(this, todo)}
-						editing={this.state.editing === todo.id}
-						onSave={this.save.bind(this, todo)}
-						onCancel={this.cancel}
-					/>
-				);
-			}, this);
-
-			var activeTodoCount = todos.reduce(function (accum, todo) {
-				return todo.completed ? accum : accum + 1;
-			}, 0);
-
-			var completedCount = todos.length - activeTodoCount;
-
-			if (activeTodoCount || completedCount) {
-				footer =
-					<TodoFooter
-						count={activeTodoCount}
-						completedCount={completedCount}
-						nowShowing={this.state.nowShowing}
-						onClearCompleted={this.clearCompleted}
-					/>;
-			}
-
-			if (todos.length) {
-				main = (
-					<section className="main">
-						<input
-							className="toggle-all"
-							type="checkbox"
-							onChange={this.toggleAll}
-							checked={activeTodoCount === 0}
-						/>
-						<ul className="todo-list">
-							{todoItems}
-						</ul>
-					</section>
-				);
-			}
-
-			return (
-				<div>
-					<header className="header">
-						<h1>todos</h1>
-						<input
-							className="new-todo"
-							placeholder="What needs to be done?"
-							value={this.state.newTodo}
-							onKeyDown={this.handleNewTodoKeyDown}
-							onChange={this.handleChange}
-							autoFocus={true}
-						/>
-					</header>
-					{main}
-					{footer}
-				</div>
-			);
 		}
+
 	});
 
-	var model = new app.TodoModel('react-todos');
+	var model = new app.TodoModel('amaro-todos');
 	var element = document.getElementsByClassName('todoapp')[0];
 
 	app.todoApp = Amaro.mount(element, TodoApp, { model: model });
