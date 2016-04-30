@@ -52,22 +52,22 @@ var app = app || {};
 			var val = this.state.newTodo.trim();
 
 			if (val) {
-				this.props.model.addTodo(val);
+				this.state.model.addTodo(val);
 				this.setState({newTodo: ''});
 			}
 		},
 
 		toggleAll: function (event) {
 			var checked = event.target.checked;
-			this.props.model.toggleAll(checked);
+			this.state.model.toggleAll(checked);
 		},
 
 		toggle: function (todoToToggle) {
-			this.props.model.toggle(todoToToggle);
+			this.state.model.toggle(todoToToggle);
 		},
 
 		destroy: function (todo) {
-			this.props.model.destroy(todo);
+			this.state.model.destroy(todo);
 		},
 
 		edit: function (todo) {
@@ -75,7 +75,7 @@ var app = app || {};
 		},
 
 		save: function (todoToSave, text) {
-			this.props.model.save(todoToSave, text);
+			this.state.model.save(todoToSave, text);
 			this.setState({editing: null});
 		},
 
@@ -84,13 +84,13 @@ var app = app || {};
 		},
 
 		clearCompleted: function () {
-			this.props.model.clearCompleted();
+			this.state.model.clearCompleted();
 		},
 
 		render: function () {
 			var footer;
 			var main;
-			var todos = this.props.model.todos;
+			var todos = this.state.model.todos;
 
 			var shownTodos = todos.filter(function (todo) {
 				switch (this.state.nowShowing) {
