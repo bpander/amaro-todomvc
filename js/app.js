@@ -51,6 +51,7 @@ var app = app || {};
 				return todo.completed ? accum : accum + 1;
 			}, 0);
 			this.completedCount = todos.length - this.activeTodoCount;
+			this.activeTodoWord = app.Utils.pluralize(this.activeTodoCount, 'item');
 			this.shownTodos = todos.filter(function (todo) {
 				switch (nextState.nowShowing) {
 				case app.ACTIVE_TODOS:

@@ -20,6 +20,7 @@ Deferred = function () {
 Util = function () {
   var Util = {};
   Util.noop = Function.prototype;
+  var _envSupportsTransitions = document.createElement('div').style.transition !== undefined;
   /**
    * Create a deep copy of an object. Adapted from http://stackoverflow.com/a/728694/1159534.
    *
@@ -82,6 +83,13 @@ Util = function () {
     // Convert to ms
     return totalTransitionTime;
   };
+  // IE9 Hack. IE9 is the only supported browser that doesn't support transitions.
+  // TODO: Maybe make an IE9-specific build. Or just ignore IE9.
+  if (!_envSupportsTransitions) {
+    Util.getTotalTransitionTime = function () {
+      return 0;
+    };
+  }
   Util.forceRedraw = function (element) {
     var display = element.style.display;
     element.style.display = 'none';
@@ -107,7 +115,7 @@ Animator = function (Deferred, Util) {
   };
   proto.animate = function (elements, type) {
     if (!this.enabled) {
-      return Promise.resolve();
+      return null;
     }
     var initialClass = this.prefix + type;
     var activeClass = initialClass + '-active';
@@ -126,8 +134,8 @@ Animator = function (Deferred, Util) {
     });
     transitionTime = Math.max.apply(null, elements.map(Util.getTotalTransitionTime));
     if (transitionTime === 0) {
-      this.animation.resolve();
-      return this.animation.promise;
+      always();
+      return null;
     }
     elements.forEach(function (element) {
       element.classList.add(activeClass);
@@ -222,7 +230,7 @@ Control = function (Animator) {
   };
   proto.leave = function () {
     if (!this.isMounted) {
-      return Promise.resolve();
+      return null;
     }
     return this.animator.animate([this.element], Animator.TYPE.LEAVE);
   };
@@ -238,7 +246,7 @@ Control = function (Animator) {
 Component = function (Control, Util) {
   function Component(element) {
     Control.call(this, element);
-    this.state = Util.deepCopy(this.constructor.defaults);
+    this.state = Util.deepCopy(this.constructor.defaults || {});
     this.prevState = Util.deepCopy(this.state);
   }
   Component.prototype = Object.create(Control.prototype);
@@ -247,23 +255,26 @@ Component = function (Control, Util) {
   Component.defaults = {};
   proto.acceptState = function (state, loop, thisArg) {
     this.setState(this.expression.call(thisArg, state, loop), loop);
-    this.isMounted = true;
   };
   proto.setState = function (state, loop) {
     var i;
     var l;
     var prevState = this.prevState;
-    var nextState = Object.assign(this.state, state);
+    var nextState = Object.assign({}, this.state, state);
     var shouldComponentUpdate = this.isMounted ? this.shouldComponentUpdate(nextState) : true;
-    this.prevState = Util.deepCopy(this.state);
+    var isMounted = this.isMounted;
+    this.prevState = Util.deepCopy(nextState);
     if (shouldComponentUpdate === false) {
+      this.state = nextState;
       return;
     }
-    this.isMounted ? this.componentWillUpdate(nextState) : this.componentWillMount();
+    isMounted ? this.componentWillUpdate(nextState) : this.componentWillMount();
+    this.state = nextState;
     for (i = 0, l = this.children.length; i < l; i++) {
       this.children[i].acceptState(nextState, loop, this);
     }
-    this.isMounted ? this.componentDidUpdate(prevState) : this.componentDidMount();
+    this.isMounted = true;
+    isMounted ? this.componentDidUpdate(prevState) : this.componentDidMount();
   };
   proto.unmount = function () {
     Control.prototype.unmount.call(this);
@@ -297,7 +308,7 @@ IfControl = function (Control, Util) {
   proto.acceptState = function (state, loop, thisArg) {
     if (this.expression.call(thisArg, state, loop)) {
       this.attach();
-      Control.prototype.acceptState.call(this, state, loop);
+      Control.prototype.acceptState.call(this, state, loop, thisArg);
     } else {
       this.detach();
     }
@@ -334,10 +345,15 @@ IfControl = function (Control, Util) {
   };
   proto.leave = function () {
     var promise = Control.prototype.leave.call(this);
-    promise.then(function () {
+    var onFulfilled = function () {
       this.parentNode = this.element.parentNode;
       this.parentNode.removeChild(this.element);
-    }.bind(this));
+    }.bind(this);
+    if (promise === null) {
+      onFulfilled();
+    } else {
+      promise.then(onFulfilled);
+    }
     return promise;
   };
   return IfControl;
@@ -345,7 +361,8 @@ IfControl = function (Control, Util) {
 IterationControl = function (Animator, Control) {
   function IterationControl(element) {
     Control.call(this, element);
-    this.childNodes = Array.prototype.slice.call(element.childNodes, 0);
+    this.childNodes = Array.prototype.slice.call(element.childNodes);
+    this.childElements = Array.prototype.slice.call(element.children);
     this.index = -1;
     this.willDestroy = false;
   }
@@ -354,18 +371,23 @@ IterationControl = function (Animator, Control) {
   proto.constructor = IterationControl;
   proto.enter = function () {
     var type = this.parent.isMounted ? Animator.TYPE.ENTER : Animator.TYPE.APPEAR;
-    return this.animator.animate(this.childNodes, type);
+    return this.animator.animate(this.childElements, type);
   };
   proto.leave = function () {
     if (!this.isMounted) {
-      return Promise.resolve();
+      return null;
     }
-    var promise = this.animator.animate(this.childNodes, Animator.TYPE.LEAVE);
-    promise.then(function () {
+    var promise = this.animator.animate(this.childElements, Animator.TYPE.LEAVE);
+    var onFulfilled = function () {
       this.childNodes.forEach(function (node) {
         node.parentNode.removeChild(node);
       });
-    }.bind(this));
+    }.bind(this);
+    if (promise === null) {
+      onFulfilled();
+    } else {
+      promise.then(onFulfilled);
+    }
     return promise;
   };
   return IterationControl;
@@ -422,12 +444,18 @@ EachControl = function (Control, IterationControl, Util) {
       if (iteration.willDestroy) {
         return;
       }
+      var onFulFilled = function () {
+        delete iterations[key];
+      };
       iterations[key] = iteration;
       iteration.willDestroy = true;
       iteration.unmount();
-      iteration.leave().then(function () {
-        delete iterations[key];
-      });
+      var promise = iteration.leave();
+      if (promise === null) {
+        onFulFilled();
+      } else {
+        promise.then(onFulFilled);
+      }
     }, this);
     // Store a reference to the new hash table
     this.iterations = iterations;
@@ -439,11 +467,11 @@ EachControl = function (Control, IterationControl, Util) {
   };
   proto.controlDidParse = function () {
     Control.prototype.controlDidParse.call(this);
-    var childElements = Array.prototype.slice.call(this.element.children);
+    var childNodes = Array.prototype.slice.call(this.element.childNodes);
     var i;
     var l;
-    for (i = 0, l = childElements.length; i < l; i++) {
-      this.template.appendChild(childElements[i]);
+    for (i = 0, l = childNodes.length; i < l; i++) {
+      this.template.appendChild(childNodes[i]);
     }
   };
   proto.createIteration = function () {
@@ -485,6 +513,7 @@ OutputControl = function (Control) {
   proto.acceptState = function (state, loop, thisArg) {
     var props = this.expression.call(thisArg, state, loop);
     OutputControl.merge(this.element, props);
+    Control.prototype.acceptState.call(this, state, loop, thisArg);
     this.isMounted = true;
   };
   return OutputControl;
